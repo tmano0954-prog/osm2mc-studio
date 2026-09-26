@@ -1,0 +1,280 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>OSM2MC Studio - 1:1 Real-World Minecraft Generator</title>
+    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+    <style>
+        @font-face {
+            font-family: 'Highway Gothic';
+            src: url('https://fonts.cdnfonts.com/s/15448/HighwayGothic.woff') format('woff');
+            font-weight: normal;
+            font-style: normal;
+        }
+
+        :root {
+            --fdot-green: #006a4e;
+            --fdot-yellow: #f5b316;
+            --asphalt-dark: #12161a;
+            --asphalt-panel: #1e242b;
+            --asphalt-border: #323b44;
+            --text-light: #e6e8ea;
+        }
+
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+            font-family: 'Highway Gothic', 'Segoe UI', Arial, sans-serif;
+            letter-spacing: 0.5px;
+        }
+
+        body {
+            background-color: var(--asphalt-dark);
+            color: var(--text-light);
+            display: flex;
+            flex-direction: column;
+            height: 100vh;
+            overflow: hidden;
+        }
+
+        header {
+            background-color: var(--fdot-green);
+            color: #ffffff;
+            padding: 12px 24px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            border-bottom: 4px solid var(--fdot-yellow);
+            box-shadow: 0 4px 12px rgba(0,0,0,0.5);
+        }
+
+        header h1 {
+            font-size: 1.8rem;
+            text-transform: uppercase;
+        }
+
+        .container {
+            display: flex;
+            flex: 1;
+            height: calc(100vh - 60px);
+        }
+
+        #map-container {
+            flex: 1;
+            position: relative;
+        }
+
+        #map {
+            width: 100%;
+            height: 100%;
+        }
+
+        sidebar {
+            width: 380px;
+            background-color: var(--asphalt-panel);
+            border-left: 2px solid var(--asphalt-border);
+            padding: 20px;
+            display: flex;
+            flex-direction: column;
+            gap: 16px;
+            overflow-y: auto;
+        }
+
+        .card {
+            background: rgba(0,0,0,0.2);
+            border: 1px solid var(--asphalt-border);
+            border-radius: 6px;
+            padding: 16px;
+        }
+
+        .card h2 {
+            color: var(--fdot-yellow);
+            font-size: 1.2rem;
+            margin-bottom: 12px;
+            text-transform: uppercase;
+            border-bottom: 1px solid var(--asphalt-border);
+            padding-bottom: 4px;
+        }
+
+        .form-group {
+            display: flex;
+            flex-direction: column;
+            gap: 6px;
+            margin-bottom: 12px;
+        }
+
+        label {
+            font-size: 0.9rem;
+            color: #a0aab4;
+        }
+
+        select, input, button {
+            background-color: #12161a;
+            border: 1px solid var(--asphalt-border);
+            color: #fff;
+            padding: 10px;
+            border-radius: 4px;
+            font-size: 1rem;
+        }
+
+        select:focus, input:focus {
+            outline: none;
+            border-color: var(--fdot-yellow);
+        }
+
+        .checkbox-group {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            margin-top: 6px;
+        }
+
+        .checkbox-group input {
+            width: 18px;
+            height: 18px;
+            accent-color: var(--fdot-yellow);
+        }
+
+        .btn-primary {
+            background-color: var(--fdot-green);
+            color: #fff;
+            border: none;
+            padding: 14px;
+            font-size: 1.2rem;
+            font-weight: bold;
+            text-transform: uppercase;
+            cursor: pointer;
+            transition: background 0.2s;
+            border-radius: 4px;
+            box-shadow: 0 4px 6px rgba(0,0,0,0.3);
+        }
+
+        .btn-primary:hover {
+            background-color: #008864;
+        }
+
+        #preview-canvas {
+            width: 100%;
+            height: 100px;
+            background-color: #0a0c0e;
+            border: 1px solid var(--asphalt-border);
+            border-radius: 4px;
+        }
+    </style>
+</head>
+<body>
+    <header>
+        <h1>OSM2MC Studio - Real World Generator</h1>
+        <div style="font-size: 0.9rem; color: var(--fdot-yellow);">1:1 Scale Precision Engine</div>
+    </header>
+
+    <div class="container">
+        <div id="map-container">
+            <div id="map"></div>
+        </div>
+
+        <sidebar>
+            <div class="card">
+                <h2>1. Selected Bounds</h2>
+                <div class="form-group">
+                    <label>Bounding Box (South, West, North, East):</label>
+                    <input type="text" id="bbox-input" readonly placeholder="Select area on map...">
+                </div>
+            </div>
+
+            <div class="card">
+                <h2>2. Target Version</h2>
+                <div class="form-group">
+                    <label>Minecraft Edition & Version:</label>
+                    <select id="version-select">
+                        <option value="1.21.1">Java Edition 1.21.1 (Modern MCA)</option>
+                        <option value="1.20.1">Java Edition 1.20.1 (Modern MCA)</option>
+                        <option value="1.12.2">Java Edition 1.12.2 (Legacy MCA)</option>
+                        <option value="1.7.10">Java Edition 1.7.10 (Legacy MCA / Numeric IDs)</option>
+                        <option value="bedrock_26.50">Bedrock Edition 1.26.50 (LevelDB)</option>
+                    </select>
+                </div>
+                <div class="form-group">
+                    <label>Export Format:</label>
+                    <select id="format-select">
+                        <option value="world_zip">Full World Save (.zip)</option>
+                        <option value="schem">Modern Schematic (.schem)</option>
+                        <option value="litematic">Litematica (.litematic)</option>
+                        <option value="legacy_schematic">Legacy Schematic (.schematic 1.7.10)</option>
+                    </select>
+                </div>
+            </div>
+
+            <div class="card">
+                <h2>3. Road & Sign Details</h2>
+                <div class="checkbox-group">
+                    <input type="checkbox" id="sign-maps" checked>
+                    <label for="sign-maps">Enable Sign Maps (Wikimedia MUTCD Shields)</label>
+                </div>
+                <div class="checkbox-group" style="margin-top: 8px;">
+                    <input type="checkbox" id="tactile-paving" checked>
+                    <label for="tactile-paving">Include Yellow Wool Tactile Crosswalks</label>
+                </div>
+            </div>
+
+            <div class="card">
+                <h2>Road Palette Preview</h2>
+                <canvas id="preview-canvas"></canvas>
+            </div>
+
+            <button class="btn-primary" id="generate-btn">Generate Real World</button>
+        </sidebar>
+    </div>
+
+    <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+    <script>
+        const map = L.map('map').setView([28.5383, -81.3792], 15);
+        L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+            maxZoom: 19,
+            attribution: '© OpenStreetMap contributors'
+        }).addTo(map);
+
+        let boundsRect;
+
+        map.on('moveend', () => {
+            const bounds = map.getBounds();
+            const bboxStr = `${bounds.getSouth().toFixed(5)}, ${bounds.getWest().toFixed(5)}, ${bounds.getNorth().toFixed(5)}, ${bounds.getEast().toFixed(5)}`;
+            document.getElementById('bbox-input').value = bboxStr;
+
+            if (boundsRect) map.removeLayer(boundsRect);
+            boundsRect = L.rectangle(bounds, {color: "#f5b316", weight: 2, fillOpacity: 0.1}).addTo(map);
+        });
+
+        const canvas = document.getElementById('preview-canvas');
+        const ctx = canvas.getContext('2d');
+        function drawPreview() {
+            ctx.clearRect(0, 0, canvas.width, canvas.height);
+            ctx.fillStyle = "#2c3e50"; // Cyan terracotta road base
+            ctx.fillRect(20, 30, 200, 40);
+            ctx.fillStyle = "#f1c40f"; // Yellow wool tactile paving
+            ctx.fillRect(20, 25, 200, 5);
+            ctx.fillStyle = "#ecf0f1"; // White wool lane lines
+            ctx.fillRect(50, 48, 30, 4);
+            ctx.fillRect(110, 48, 30, 4);
+            ctx.fillRect(170, 48, 30, 4);
+        }
+        drawPreview();
+
+        document.getElementById('generate-btn').addEventListener('click', async () => {
+            const bbox = document.getElementById('bbox-input').value;
+            const version = document.getElementById('version-select').value;
+            const format = document.getElementById('format-select').value;
+            const signMaps = document.getElementById('sign-maps').checked;
+
+            if (!bbox) {
+                alert("Please select an area on the map first!");
+                return;
+            }
+
+            alert(`Starting generation for ${bbox}\nVersion: ${version}\nFormat: ${format}\nSign Maps: ${signMaps}`);
+        });
+    </script>
+</body>
+</html>

@@ -1,0 +1,8 @@
+{
+  "minecraft:cyan_terracotta": { "id": 159, "data": 9 },
+  "minecraft:stone": { "id": 1, "data": 0 },
+  "minecraft:yellow_wool": { "id": 35, "data": 4 },
+  "minecraft:white_wool": { "id": 35, "data": 0 },
+  "minecraft:quartz_stairs": { "id": 156, "data": 0 },
+  "minecraft:anvil": { "id": 145, "data": 0 }
+}

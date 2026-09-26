@@ -1,0 +1,21 @@
+[package]
+name = "osm2mc_core"
+version = "0.1.0"
+edition = "2021"
+authors = ["OSM2MC Studio Contributors"]
+
+[lib]
+name = "osm2mc_core"
+crate-type = ["cdylib", "rlib"]
+
+[dependencies]
+geo = "0.27"
+geo-types = "0.7"
+fastnbt = "0.24"
+serde = { version = "1.0", features = ["derive"] }
+serde_json = "1.0"
+pyo3 = { version = "0.20", features = ["extension-module"], optional = true }
+
+[features]
+default = []
+python = ["pyo3"]
